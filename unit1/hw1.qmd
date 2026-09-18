@@ -86,6 +86,7 @@ print(f"The net field on the point is \x1B[3mE = {i_field:.2e} i\u0302 N/C + {j_
 
 ## Question 2: Timing of contact
 Equation used:
+$a=\frac{8.99\cdot10^{9}\cdot\frac{\left(7.48\cdot10^{-10}\right)^{2}}{r^{2}}}{4.35\cdot10^{-3}}$
 
 ```{python}
 time = velocity = 0
