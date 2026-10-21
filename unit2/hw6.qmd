@@ -1,0 +1,141 @@
+---
+title: "Numerical Homework 6"
+subtitle: "PH220"
+author: "John Wendt"
+format:
+  html:
+    self-contained: true
+    page-layout: full
+    title-block-banner: true
+    toc: true
+    toc-depth: 3
+    toc-location: body
+    number-sections: false
+    html-math-method: katex
+    code-fold: true
+    code-summary: "Show the code"
+    code-overflow: wrap
+    code-copy: hover
+    code-tools:
+        source: false
+        toggle: true
+        caption: See code
+execute: 
+  warning: false
+    
+---
+```{python}
+import polars as pl
+import numpy as np
+from lets_plot import *
+import math
+
+LetsPlot.setup_html(isolated_frame=True)
+```
+
+## Question 1: Plot force
+```{python}
+def calcRes(kelvin, voltage):
+    return voltage / ( 1e-9 * ( math.e ** ( 1.6e-19 * voltage / ( 1.380649e-23 * kelvin ) ) - 1 ) )
+d=[]
+kList = [280,300,320]
+for kelvin in kList:
+    for voltage in np.arange(0.400, 0.605, 0.005):
+        d.append({
+            "Temp (K)":kelvin,
+            "Voltage (V)":voltage,
+            "Resistance (Ω)":calcRes(kelvin,voltage)
+        })
+
+adf = pl.DataFrame(d)
+aplot = (
+    ggplot(adf,aes(x="Voltage (V)",y="Resistance (Ω)",color=as_discrete("Temp (K)")))
+    +geom_line()
+)
+aplot
+```
+
+## Question 2: Plot current
+```{python}
+bdf = pl.DataFrame({
+    "Gauge": [4, 6, 8, 10, 12, 14, 16, 18],
+    "Diameter (mils)": [204, 162, 129, 102, 81, 64, 51, 40],
+    "Safe Current (A)": [70, 50, 35, 25, 20, 15, 6, 3],
+})
+bdf = bdf.with_columns(
+    (pl.col("Safe Current (A)")/(math.pi*(pl.col("Diameter (mils)")/2)**2))
+#    .map_elements(lambda x: f"{x:.2e}", return_dtype=pl.String)
+    .alias("Current Density (A/mils²)")
+)
+bplot = (
+    ggplot(bdf,aes(x="Diameter (mils)",y="Safe Current (A)"))
+    +geom_line()
+    +geom_point()
+)
+cplot = (
+    ggplot(bdf,aes(x="Gauge",y="Current Density (A/mils²)"))
+    +geom_line()
+    +geom_point()
+    +geom_point(x=14,y=0.00466,color="#ff7676",size=3)
+    +geom_text(
+        x=15.5,
+        y=0.00466,
+        label="14 Gauge",
+    )
+)
+bplot.show()
+cplot.show()
+```
+
+## Question 3: Plot a few things
+
+Equations used:
+$$
+3a: R=\int_{0}^{L}\frac{\rho_{0}e^{-\frac{x}{L}}}{A}dx=\frac{\rho_{0}L}{A}\left(1-e^{-1}\right)
+\qquad
+V_{0}=iR
+$$
+$$
+3b: \vec{E}=\frac{J}{\vec{\sigma}}=\frac{i}{A}\rho_{0}e^{-\frac{x}{L}}
+$$
+$$
+3c: V_{r}-V_{0}=-\int_{0}^{r}e^{-x/L}dx
+\qquad
+V_{r}=V_{0}-\frac{i}{A}\rho_{0}L\left(1-e^{-r/L}\right)
+$$
+```{python}
+resist = (8.71e-5*4.75e-2/3.62e-6)*(1-math.e**-1)
+current = 47.6/resist
+print(f"3a: {resist:.3e} ohms and {current:.3e} amps")
+
+def calcRstvty(l):
+    return 8.71e-5*math.e**(-l/4.75e-2)
+def calcEfield(x):
+    return (current*8.71e-5/3.62e-6)*(math.e**(-x/4.75e-2))
+def calcVolt(r):
+    return 47.6 - ((current/3.62e-6)*8.71e-5*4.75e-2*(1-math.e**(-r/4.75e-2)))
+d=[]
+for x in np.linspace(0,4.75e-2,100):
+    d.append({
+        "Length (m)":x,
+        "Resistivity (Ωm)":calcRstvty(x),
+        "E-field (V/m)":calcEfield(x),
+        "Voltage (V)":calcVolt(x)
+    })
+cdf = pl.DataFrame(d)
+dplot = (
+    ggplot(cdf,aes(x="Length (m)",y="Resistivity (Ωm)"))
+    +geom_line()
+)
+eplot = (
+    ggplot(cdf,aes(x="Length (m)",y="E-field (V/m)"))
+    +geom_line()
+)
+fplot = (
+    ggplot(cdf,aes(x="Length (m)",y="Voltage (V)"))
+    +geom_line()
+)
+dplot.show()
+eplot.show()
+fplot.show()
+```
